@@ -11,7 +11,7 @@
   "dependencies": {
     "axios": "^1.2.4",
     "bee-queue": "^1.5.0",
-    "chatgpt": "^4.0.2",
+    "chatgpt": "^4.0.4",
     "chatgpt-official": "^1.0.7",
     "dotenv-safe": "^8.2.0",
     "lowdb": "^5.0.5",

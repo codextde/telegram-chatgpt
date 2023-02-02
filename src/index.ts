@@ -29,14 +29,13 @@ async function init() {
   bot = new Telegraf(process.env.TELEGRAM_TOKEN, {
     handlerTimeout: 900_000,
   });
-  bot.start((ctx) => ctx.reply("Send me a YouTube Video Link"));
-  bot.help((ctx) => ctx.reply("Send me a YouTube Video Link"));
+  bot.start((ctx) => ctx.reply("Send me a message"));
+  bot.help((ctx) => ctx.reply("Send me a message"));
 
   bot.on(message("text"), async (ctx) => {
     const chatText = ctx.message.text;
     const chatId = ctx.message.chat.id;
     if (chatText.startsWith("/")) {
-      let splitText = chatText.split(" ", 1);
       if (chatText == "/newchat") {
         db.delete(chatId.toString());
         await ctx.reply("Your old chat has been deleted.");
@@ -48,44 +47,51 @@ async function init() {
       }
     } else {
       await ctx.sendChatAction("typing");
-      const message = await ctx.sendMessage("typing..");
-      console.log("message", message);
+      const message = await ctx.sendMessage("typing...");
+      // console.log("message", chatText);
       handleMessage(message, ctx);
     }
   });
   bot.hears("hi", (ctx) => ctx.reply("Hi Ho"));
   bot.launch();
 
-  process.once("SIGINT", () => bot.stop("SIGINT"));
-  process.once("SIGTERM", () => bot.stop("SIGTERM"));
+  bot.catch(()=> {
+    bot.stop();
+    bot.launch();
+  })
+
+  //process.once("SIGINT", () => bot.stop("SIGINT"));
+  //process.once("SIGTERM", () => bot.stop("SIGTERM"));
 }
 
 async function handleMessage(message, ctx) {
   const chatId = message.chat.id;
-  const chatText = message.text;
+  const chatText = ctx.message.text;
   const messageId = message.message_id;
   let textMessage = '';
 
-  const chatInfo = db.has(chatId.toString()) ? db.get(chatId.toString()) : {};
+  try {
+    const chatInfo = db.has(chatId.toString()) ? db.get(chatId.toString()) : {};
   const chatSettings = {
     conversationId: chatInfo.conversationId ?? undefined,
     parentMessageId: chatInfo.lastMessage ?? undefined,
+    promptPrefix: `You are ChatGPT, a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). Current date: ${new Date().toISOString()}\n\n`,
     onProgress: (progress) => {
       // console.log(progress);
       // console.log('message', message);
       const newMessage = progress.text.replace(/\n/g, "");
+      // console.log('newMessage', newMessage, textMessage)
       if (newMessage != textMessage) {
         if (textMessage == "") {
           textMessage = "typing...";
         }
         textMessage = newMessage;
-        ctx.telegram.editMessageText(chatId, messageId, undefined, textMessage);
+        ctx.telegram.editMessageText(chatId, messageId, undefined, textMessage).catch(()=>{});
       }
-      
-      
     },
   };
 
+  console.log('chatText', chatText);
   const result = await api.sendMessage(chatText, chatSettings);
   console.log("result", result);
 
@@ -97,4 +103,7 @@ async function handleMessage(message, ctx) {
     ctx.telegram.deleteMessage(message.chat.id, message.message_id),
     ctx.reply(result.text),
   ]);
+  } catch (error) {
+    ctx.reply("Error");
+  }
 }
