@@ -79,7 +79,7 @@ async function handleMessage(message, ctx) {
     onProgress: (progress) => {
       // console.log(progress);
       // console.log('message', message);
-      const newMessage = progress.text.replace(/\n/g, "");
+      const newMessage = progress.text;//.replace(/\n/g, "");
       // console.log('newMessage', newMessage, textMessage)
       if (newMessage != textMessage) {
         if (textMessage == "") {
