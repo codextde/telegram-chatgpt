@@ -6,9 +6,8 @@ import { Telegraf } from "telegraf";
 //import JSONdb from "simple-json-db";
 import { dynamicImport } from "tsimportlib";
 import { message } from "telegraf/filters";
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+
+
 const db = new JSONdb("./storage.json");
 // const queue = new Queue("chatgpt");
 dotenv.config();
@@ -26,7 +25,7 @@ async function init() {
   api = new chatGPT.ChatGPTAPI({
     apiKey: process.env.OPENAI_KEY,
   });
-  
+
   bot = new Telegraf(process.env.TELEGRAM_TOKEN, {
     handlerTimeout: 900_000,
   });
@@ -34,21 +33,8 @@ async function init() {
   bot.help((ctx) => ctx.reply("Send me a YouTube Video Link"));
 
   bot.on(message("text"), async (ctx) => {
-    bot.telegram.sendChatAction(ctx.chat.id, "typing");
-    handleMessage(ctx);
-  });
-  bot.hears("hi", (ctx) => ctx.reply("Hi Ho"));
-  bot.launch();
-
-  process.once("SIGINT", () => bot.stop("SIGINT"));
-  process.once("SIGTERM", () => bot.stop("SIGTERM"));
-}
-
-
-async function handleMessage(ctx) {
-  const chatId = ctx.message.chat.id;
     const chatText = ctx.message.text;
-
+    const chatId = ctx.message.chat.id;
     if (chatText.startsWith("/")) {
       let splitText = chatText.split(" ", 1);
       if (chatText == "/newchat") {
@@ -60,38 +46,55 @@ async function handleMessage(ctx) {
           "Hello, This bot gives you AI-powered answers using ChatGPT. \nAvailable commands are:\n\n/newchat - Start a new chat";
         await ctx.reply(text);
       }
+    } else {
+      await ctx.sendChatAction("typing");
+      const message = await ctx.sendMessage("typing..");
+      console.log("message", message);
+      handleMessage(message, ctx);
     }
+  });
+  bot.hears("hi", (ctx) => ctx.reply("Hi Ho"));
+  bot.launch();
 
+  process.once("SIGINT", () => bot.stop("SIGINT"));
+  process.once("SIGTERM", () => bot.stop("SIGTERM"));
+}
 
-    try {
-      const chatInfo = db.has(chatId.toString())
-        ? db.get(chatId.toString())
-        : {};
-      const chatSettings = {
-        conversationId: chatInfo.conversationId ?? undefined,
-        parentMessageId: chatInfo.lastMessage ?? undefined,
-      };
+async function handleMessage(message, ctx) {
+  const chatId = message.chat.id;
+  const chatText = message.text;
+  const messageId = message.message_id;
+  let textMessage = '';
 
-      const oraPromise = (await dynamicImport(
-        "ora",
-        module
-      )) as typeof import("ora");
-
-      let result: any = await oraPromise.oraPromise(
-        api.sendMessage(chatText, chatSettings),
-        {
-          text: "Processing Message: " + chatText,
+  const chatInfo = db.has(chatId.toString()) ? db.get(chatId.toString()) : {};
+  const chatSettings = {
+    conversationId: chatInfo.conversationId ?? undefined,
+    parentMessageId: chatInfo.lastMessage ?? undefined,
+    onProgress: (progress) => {
+      // console.log(progress);
+      // console.log('message', message);
+      const newMessage = progress.text.replace(/\n/g, "");
+      if (newMessage != textMessage) {
+        if (textMessage == "") {
+          textMessage = "typing...";
         }
-      );
-      console.log(result);
+        textMessage = newMessage;
+        ctx.telegram.editMessageText(chatId, messageId, undefined, textMessage);
+      }
+      
+      
+    },
+  };
 
-      db.set(chatId.toString(), {
-        conversationId: result.conversationId,
-        lastMessage: result.parentMessageId,
-      });
-      await ctx.reply(result.text)
-      return Promise.resolve();
-    } catch (e) {
-      throw new Error("Error");
-    }
+  const result = await api.sendMessage(chatText, chatSettings);
+  console.log("result", result);
+
+  db.set(chatId.toString(), {
+    conversationId: result.conversationId,
+    lastMessage: result.parentMessageId,
+  });
+  await Promise.all([
+    ctx.telegram.deleteMessage(message.chat.id, message.message_id),
+    ctx.reply(result.text),
+  ]);
 }
