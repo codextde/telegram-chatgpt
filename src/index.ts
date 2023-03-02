@@ -53,12 +53,8 @@ async function handleMessage(message, ctx) {
 
   try {
     const chatInfo = db.has(chatId.toString()) ? db.get(chatId.toString()) : {};
-    console.log("chatText", chatText);
-    const result = await askQuestion(
-      chatText,
-      chatInfo.parentMessageId,
-      chatInfo.conversationId
-    );
+    console.log("chatText", chatInfo);
+    const result = await askQuestion(chatText, chatInfo.conversationId, chatInfo.parentMessageId);
     console.log("result", result);
 
     db.set(chatId.toString(), {
@@ -74,18 +70,14 @@ async function handleMessage(message, ctx) {
   }
 }
 
-async function askQuestion(
-  text: string,
-  parentMessageId?: string,
-  conversationId?: string
-) {
+async function askQuestion(text: string, conversationId?: string, parentMessageId?: string) {
   try {
     const response: any = await axios.post(
       `${process.env.CHATGPT_API}/message?authKey=${process.env.AUTH_KEY}`,
       {
         text,
-        parentMessageId,
         conversationId,
+        parentMessageId
       }
     );
     return response.data;
