@@ -125,7 +125,7 @@ bot.on("text", async (ctx) => {
   //   ctx.reply("Please set your language and API key first.");
   //   return;
   // }
-
+  await ctx.sendChatAction("typing");
   const completion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     max_tokens: 4000,
