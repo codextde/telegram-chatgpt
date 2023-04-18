@@ -111,7 +111,7 @@ bot.command("setemail", async (ctx) => {
   ctx.reply(`Email set to: ${emailText}`);
 });
 
-bot.on("text", (ctx) => {
+bot.on("text", async (ctx) => {
   const userId = ctx.from?.id;
 
   if (!userId) {
@@ -121,15 +121,26 @@ bot.on("text", (ctx) => {
 
   const userData = userDataMap.get(userId);
 
-  if (!userData || !userData.language || !userData.apiKey) {
-    ctx.reply("Please set your language and API key first.");
-    return;
-  }
+  // if (!userData || !userData.language || !userData.apiKey) {
+  //   ctx.reply("Please set your language and API key first.");
+  //   return;
+  // }
 
-  // Replace this with your own logic to provide a response based on the user's message, language, and API key
-  ctx.reply(
-    `You said: ${ctx.message?.text}\nLanguage: ${userData.language}\nAPI Key: ${userData.apiKey}`
-  );
+  const completion = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo",
+    max_tokens: 4000,
+    messages: [{role: "user", content: ctx.message?.text}],
+  });
+
+  const answer = completion.data.choices[0].message?.content;
+
+  if(answer) {
+    ctx.reply(answer);
+    const audioFile = await microsoftTts(answer);
+    await ctx.replyWithVoice(Input.fromBuffer(audioFile));
+  } else {
+    ctx.reply("Error: Unable to generate a response.");
+  }
 });
 
 bot.on("voice", async (ctx) => {
@@ -140,10 +151,10 @@ bot.on("voice", async (ctx) => {
   }
 
   const userData = userDataMap.get(userId);
-  if (!userData || !userData.apiKey) {
-    ctx.reply("Please set your API key first.");
-    return;
-  }
+  // if (!userData || !userData.apiKey) {
+  // //   ctx.reply("Please set your API key first.");
+  //   return;
+  // }
 
   const fileId = ctx.message?.voice?.file_id;
   if (!fileId) {
