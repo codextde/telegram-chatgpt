@@ -2,6 +2,12 @@
 
 Welcome to the Open Source Telegram ChatGPT Bot built with Node.js and TypeScript! This powerful bot is designed to provide speech-to-text and text-to-speech capabilities using state-of-the-art AI services. The bot utilizes OpenAI Whisper for Speech-to-Text, Microsoft TTS, and soon Elevenlabs TTS for Text-to-Speech, and OpenAI ChatGPT to provide intelligent and interactive conversations with your users.
 
+
+
+https://user-images.githubusercontent.com/19570043/236638196-78ed990c-3699-4583-b2b9-64c46183eed3.mp4
+
+
+
 ## Table of Contents
 
 - [Features](#features)
